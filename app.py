@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 from flask import Flask, jsonify, request
 import os
+import requests
 
 # ----------------------------
 # Flask server for endpoints
@@ -71,14 +72,24 @@ app.layout = dbc.Container([
 # Dash callback
 # =======================
 @app.callback(
-    [Output("scanned-tile", "children"),
-     Output("anomalies-tile", "children"),
-     Output("fps-tile", "children"),
-     Output("performance-chart", "figure")],
-    [Input("update-interval", "n_intervals"),
-     Input("metrics-store", "data")]
+    [
+        Output("scanned-tile", "children"),
+        Output("anomalies-tile", "children"),
+        Output("fps-tile", "children"),
+        Output("performance-chart", "figure"),
+    ],
+    [Input("update-interval", "n_intervals")]
 )
-def update_dashboard(n, data):
+def update_dashboard(n):
+    try:
+        # Fetch latest metrics from backend
+        resp = requests.get("https://met-rbic.onrender.com/metrics", timeout=2)
+        data = resp.json()
+    except Exception as e:
+        print("Error fetching metrics:", e)
+        # fallback to last known metrics
+        data = metrics_data
+
     scanned = data["scanned"]
     anomalies = data["anomalies"]
     fps = data["fps"]
