@@ -2,6 +2,7 @@ from dash import Dash, html, dcc
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
+import os
 
 # Use a clean & neutral Bootstrap theme
 app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
@@ -170,4 +171,9 @@ def update_dashboard(n, data):
 # RUN
 # ============================================================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8050)),
+        debug=True
+    )
+
