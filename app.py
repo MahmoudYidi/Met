@@ -2,13 +2,19 @@ from dash import Dash, html, dcc
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
+from flask import Flask, jsonify, request
 import os
 
-# Use a clean & neutral Bootstrap theme
-app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
+# ----------------------------
+# Flask server for endpoints
+# ----------------------------
+server = Flask(__name__)
+app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.FLATLY])
 
-# --- Initial default values ---
-initial_metrics = {
+# ----------------------------
+# Initial metrics
+# ----------------------------
+metrics_data = {
     "scanned": 1200,
     "anomalies": 32,
     "fps": 18.5,
@@ -18,123 +24,57 @@ initial_metrics = {
     "f1":        [0.64, 0.69, 0.75, 0.78, 0.81]
 }
 
+# =======================
+# Styles
+# =======================
+BACKGROUND_STYLE = {"background": "#e4e4e4", "minHeight": "100vh", "paddingBottom": "40px"}
+CARD_STYLE = {"borderRadius": "18px", "background": "rgba(255,255,255,0.55)",
+              "backdropFilter": "blur(6px)", "boxShadow": "0 6px 20px rgba(0,0,0,0.25)",
+              "border": "1px solid rgba(255,255,255,0.6)"}
+TITLE_STYLE = {"fontWeight": "600", "textAlign": "center", "padding": "12px 0", "color": "#333"}
+TILE_NUMBER_STYLE = {"fontSize": "42px", "fontWeight": "700", "color": "#2a2a2a"}
 
-# ============================================================
-# MODERN ASH/GRAY GLASS UI STYLES
-# ============================================================
-BACKGROUND_STYLE = {
-    "background": "#e4e4e4",  # Ash Gray
-    "minHeight": "100vh",
-    "paddingBottom": "40px"
-}
-
-CARD_STYLE = {
-    "borderRadius": "18px",
-    "background": "rgba(255,255,255,0.55)",
-    "backdropFilter": "blur(6px)",
-    "boxShadow": "0 6px 20px rgba(0,0,0,0.25)",
-    "border": "1px solid rgba(255,255,255,0.6)",
-}
-
-TITLE_STYLE = {
-    "fontWeight": "600",
-    "textAlign": "center",
-    "padding": "12px 0",
-    "color": "#333",
-}
-
-TILE_NUMBER_STYLE = {
-    "fontSize": "42px",
-    "fontWeight": "700",
-    "color": "#2a2a2a",
-}
-
-
-
-# ============================================================
-# LAYOUT
-# ============================================================
+# =======================
+# Layout
+# =======================
 app.layout = dbc.Container([
-
     dcc.Interval(id="update-interval", interval=3000),
-    dcc.Store(id="metrics-store", data=initial_metrics),
+    dcc.Store(id="metrics-store", data=metrics_data),
 
-    # ------------------- LOGO + TITLE -------------------
     html.Div([
-        html.Img(src="assets/logo.png", style={
-            "height": "85px",
-            "marginBottom": "10px",
-        }),
-
-        html.H1("Analytics Dashboard", style={
-            "textAlign": "center",
-            "fontWeight": "700",
-            "fontSize": "42px",
-            "color": "#222",
-            "marginBottom": "25px"
-        })
+        html.Img(src="/assets/logo.png", style={"height": "85px", "marginBottom": "10px"}),
+        html.H1("Analytics Dashboard", style={"textAlign": "center", "fontWeight": "700",
+                                             "fontSize": "42px", "color": "#222", "marginBottom": "25px"})
     ], style={"textAlign": "center"}),
 
-    # =================== METRIC TILES ===================
     dbc.Row([
-        dbc.Col(
-            dbc.Card([
-                dbc.CardBody([
-                    html.H6("Scanned", className="text-center text-muted"),
-                    html.Div(id="scanned-tile", style=TILE_NUMBER_STYLE)
-                ])
-            ], style=CARD_STYLE),
-            md=4
-        ),
-
-        dbc.Col(
-            dbc.Card([
-                dbc.CardBody([
-                    html.H6("Anomalies", className="text-center text-muted"),
-                    html.Div(id="anomalies-tile", style=TILE_NUMBER_STYLE)
-                ])
-            ], style=CARD_STYLE),
-            md=4
-        ),
-
-        dbc.Col(
-            dbc.Card([
-                dbc.CardBody([
-                    html.H6("FPS", className="text-center text-muted"),
-                    html.Div(id="fps-tile", style=TILE_NUMBER_STYLE)
-                ])
-            ], style=CARD_STYLE),
-            md=4
-        ),
+        dbc.Col(dbc.Card(dbc.CardBody([html.H6("Scanned", className="text-center text-muted"),
+                                       html.Div(id="scanned-tile", style=TILE_NUMBER_STYLE)]),
+                         style=CARD_STYLE), md=4),
+        dbc.Col(dbc.Card(dbc.CardBody([html.H6("Anomalies", className="text-center text-muted"),
+                                       html.Div(id="anomalies-tile", style=TILE_NUMBER_STYLE)]),
+                         style=CARD_STYLE), md=4),
+        dbc.Col(dbc.Card(dbc.CardBody([html.H6("FPS", className="text-center text-muted"),
+                                       html.Div(id="fps-tile", style=TILE_NUMBER_STYLE)]),
+                         style=CARD_STYLE), md=4),
     ], className="my-4"),
 
-    # =================== PERFORMANCE CHART ===================
     dbc.Row([
-        dbc.Col(
-            dbc.Card([
-                dbc.CardBody([
-                    html.H4("Precision / Recall / F1", style=TITLE_STYLE),
-                    dcc.Graph(id="performance-chart", style={"height": "420px"})
-                ])
-            ], style=CARD_STYLE),
-            md=12
-        )
+        dbc.Col(dbc.Card(dbc.CardBody([html.H4("Precision / Recall / F1", style=TITLE_STYLE),
+                                       dcc.Graph(id="performance-chart", style={"height": "420px"})])),
+                md=12, style=CARD_STYLE)
     ], className="my-3")
 
 ], fluid=True, style=BACKGROUND_STYLE)
 
-
-
-# ============================================================
-# CALLBACK
-# ============================================================
+# =======================
+# Dash callback
+# =======================
 @app.callback(
-    [
-        Output("scanned-tile", "children"),
-        Output("anomalies-tile", "children"),
-        Output("fps-tile", "children"),
-        Output("performance-chart", "figure"),
-    ],
+    [Output("scanned-tile", "children"),
+     Output("anomalies-tile", "children"),
+     Output("fps-tile", "children"),
+     Output("performance-chart", "figure")],
     [Input("update-interval", "n_intervals"),
      Input("metrics-store", "data")]
 )
@@ -153,27 +93,35 @@ def update_dashboard(n, data):
     fig.add_trace(go.Scatter(x=epochs, y=recall, mode="lines+markers", name="Recall"))
     fig.add_trace(go.Scatter(x=epochs, y=f1, mode="lines+markers", name="F1 Score"))
 
-    fig.update_layout(
-        template="plotly_white",
-        height=400,
-        margin=dict(l=40, r=40, t=40, b=40),
-        legend=dict(orientation="h", y=-0.2),
-        plot_bgcolor="rgba(255,255,255,0.5)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#333")
-    )
+    fig.update_layout(template="plotly_white", height=400,
+                      margin=dict(l=40, r=40, t=40, b=40),
+                      legend=dict(orientation="h", y=-0.2),
+                      plot_bgcolor="rgba(255,255,255,0.5)",
+                      paper_bgcolor="rgba(0,0,0,0)",
+                      font=dict(color="#333"))
 
     return scanned, anomalies, fps, fig
 
+# =======================
+# Backend endpoints
+# =======================
+@server.route("/metrics", methods=["GET"])
+def metrics_get():
+    """Frontend fetches metrics."""
+    return jsonify(metrics_data)
 
+@server.route("/metrics", methods=["POST"])
+def metrics_post():
+    """External devices push metrics."""
+    global metrics_data
+    incoming = request.get_json(force=True)
+    for key, value in incoming.items():
+        if key in metrics_data:
+            metrics_data[key] = value
+    return jsonify({"status": "updated", "metrics": metrics_data})
 
-# ============================================================
-# RUN
-# ============================================================
+# =======================
+# Run
+# =======================
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8050)),
-        debug=True
-    )
-
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8050)), debug=True)
