@@ -17,12 +17,12 @@ app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.FLATLY])
 # Initial metrics
 # ----------------------------
 metrics_data = {
-    "scanned": 1200,
-    "anomalies": 32,
-    "total_normal": 1168,
-    "fps": 18.5,
-    "percent_anomalous": 2.67,
-    "threshold": 0.5
+    "scanned": 0,
+    "anomalies": 0,
+    "total_normal": 0,
+    "fps": 0,
+    "percent_anomalous": 0,
+    "threshold": 0
 }
 
 # =======================
@@ -40,11 +40,11 @@ ICON_STYLE = {"fontSize": "28px", "marginRight": "8px"}
 # Layout
 # =======================
 app.layout = dbc.Container([
-    dcc.Interval(id="update-interval", interval=3000),
+    dcc.Interval(id="update-interval", interval=1000),
 
     html.Div([
         html.Img(src="/assets/logo.png", style={"height": "85px", "marginBottom": "10px"}),
-        html.H1("Anomaly Detection Dashboard", style={"textAlign": "center",
+        html.H1("Anomaly Dashboard Demo", style={"textAlign": "center",
                                                       "fontWeight": "700",
                                                       "fontSize": "42px",
                                                       "color": "#222",
@@ -90,7 +90,7 @@ app.layout = dbc.Container([
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div([
                 DashIconify(icon="mdi:percent", style=ICON_STYLE),
-                html.Span("% Anomalous", className="text-muted")
+                html.Span("Anomaly Percentage", className="text-muted")
             ], className="text-center mb-2"),
             html.Div(id="percent-anomalous-tile", style={**TILE_NUMBER_STYLE, "color": "red"})
         ]), style=CARD_STYLE), md=4),
