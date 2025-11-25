@@ -5,6 +5,7 @@ from dash.dependencies import Input, Output
 from flask import Flask, jsonify, request
 import os
 import requests
+from dash_iconify import DashIconify  
 
 # ----------------------------
 # Flask server for endpoints
@@ -18,11 +19,10 @@ app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.FLATLY])
 metrics_data = {
     "scanned": 1200,
     "anomalies": 32,
+    "total_normal": 1168,
     "fps": 18.5,
-    "epochs": [1, 2, 3, 4, 5],
-    "precision": [0.70, 0.75, 0.80, 0.82, 0.85],
-    "recall":    [0.60, 0.65, 0.72, 0.75, 0.78],
-    "f1":        [0.64, 0.69, 0.75, 0.78, 0.81]
+    "percent_anomalous": 2.67,
+    "threshold": 0.5
 }
 
 # =======================
@@ -33,37 +33,83 @@ CARD_STYLE = {"borderRadius": "18px", "background": "rgba(255,255,255,0.55)",
               "backdropFilter": "blur(6px)", "boxShadow": "0 6px 20px rgba(0,0,0,0.25)",
               "border": "1px solid rgba(255,255,255,0.6)"}
 TITLE_STYLE = {"fontWeight": "600", "textAlign": "center", "padding": "12px 0", "color": "#333"}
-TILE_NUMBER_STYLE = {"fontSize": "42px", "fontWeight": "700", "color": "#2a2a2a"}
+TILE_NUMBER_STYLE = {"fontSize": "42px", "fontWeight": "700"}
+ICON_STYLE = {"fontSize": "28px", "marginRight": "8px"}
 
 # =======================
 # Layout
 # =======================
 app.layout = dbc.Container([
     dcc.Interval(id="update-interval", interval=3000),
-    dcc.Store(id="metrics-store", data=metrics_data),
 
     html.Div([
         html.Img(src="/assets/logo.png", style={"height": "85px", "marginBottom": "10px"}),
-        html.H1("Analytics Dashboard", style={"textAlign": "center", "fontWeight": "700",
-                                             "fontSize": "42px", "color": "#222", "marginBottom": "25px"})
+        html.H1("Anomaly Detection Dashboard", style={"textAlign": "center",
+                                                      "fontWeight": "700",
+                                                      "fontSize": "42px",
+                                                      "color": "#222",
+                                                      "marginBottom": "25px"})
     ], style={"textAlign": "center"}),
 
+    # =================== METRIC TILES ===================
     dbc.Row([
-        dbc.Col(dbc.Card(dbc.CardBody([html.H6("Scanned", className="text-center text-muted"),
-                                       html.Div(id="scanned-tile", style=TILE_NUMBER_STYLE)]),
-                         style=CARD_STYLE), md=4),
-        dbc.Col(dbc.Card(dbc.CardBody([html.H6("Anomalies", className="text-center text-muted"),
-                                       html.Div(id="anomalies-tile", style=TILE_NUMBER_STYLE)]),
-                         style=CARD_STYLE), md=4),
-        dbc.Col(dbc.Card(dbc.CardBody([html.H6("FPS", className="text-center text-muted"),
-                                       html.Div(id="fps-tile", style=TILE_NUMBER_STYLE)]),
-                         style=CARD_STYLE), md=4),
+        dbc.Col(dbc.Card(dbc.CardBody([
+            html.Div([
+                DashIconify(icon="mdi:eye", style=ICON_STYLE),
+                html.Span("Scanned", className="text-muted")
+            ], className="text-center mb-2"),
+            html.Div(id="scanned-tile", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
+        ]), style=CARD_STYLE), md=4),
+
+        dbc.Col(dbc.Card(dbc.CardBody([
+            html.Div([
+                DashIconify(icon="mdi:alert-circle-outline", style=ICON_STYLE),
+                html.Span("Anomalies", className="text-muted")
+            ], className="text-center mb-2"),
+            html.Div(id="anomalies-tile", style={**TILE_NUMBER_STYLE, "color": "red"})
+        ]), style=CARD_STYLE), md=4),
+
+        dbc.Col(dbc.Card(dbc.CardBody([
+            html.Div([
+                DashIconify(icon="mdi:check-circle-outline", style=ICON_STYLE),
+                html.Span("Normal", className="text-muted")
+            ], className="text-center mb-2"),
+            html.Div(id="normal-tile", style={**TILE_NUMBER_STYLE, "color": "green"})
+        ]), style=CARD_STYLE), md=4),
     ], className="my-4"),
 
     dbc.Row([
-        dbc.Col(dbc.Card(dbc.CardBody([html.H4("Precision / Recall / F1", style=TITLE_STYLE),
-                                       dcc.Graph(id="performance-chart", style={"height": "420px"})])),
-                md=12, style=CARD_STYLE)
+        dbc.Col(dbc.Card(dbc.CardBody([
+            html.Div([
+                DashIconify(icon="mdi:speedometer", style=ICON_STYLE),
+                html.Span("FPS", className="text-muted")
+            ], className="text-center mb-2"),
+            html.Div(id="fps-tile", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
+        ]), style=CARD_STYLE), md=4),
+
+        dbc.Col(dbc.Card(dbc.CardBody([
+            html.Div([
+                DashIconify(icon="mdi:percent", style=ICON_STYLE),
+                html.Span("% Anomalous", className="text-muted")
+            ], className="text-center mb-2"),
+            html.Div(id="percent-anomalous-tile", style={**TILE_NUMBER_STYLE, "color": "red"})
+        ]), style=CARD_STYLE), md=4),
+
+        dbc.Col(dbc.Card(dbc.CardBody([
+            html.Div([
+                DashIconify(icon="mdi:vector-triangle", style=ICON_STYLE),
+                html.Span("Threshold", className="text-muted")
+            ], className="text-center mb-2"),
+            html.Div(id="threshold-tile", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
+        ]), style=CARD_STYLE), md=4),
+    ], className="my-4"),
+
+    # =================== PIE CHART ===================
+    dbc.Row([
+        dbc.Col(dbc.Card(dbc.CardBody([
+            html.H4("Normal vs Anomalous", style=TITLE_STYLE),
+            dcc.Graph(id="pie-chart", style={"height": "420px"})
+        ])), md=12, style=CARD_STYLE)
     ], className="my-3")
 
 ], fluid=True, style=BACKGROUND_STYLE)
@@ -75,55 +121,48 @@ app.layout = dbc.Container([
     [
         Output("scanned-tile", "children"),
         Output("anomalies-tile", "children"),
+        Output("normal-tile", "children"),
         Output("fps-tile", "children"),
-        Output("performance-chart", "figure"),
+        Output("percent-anomalous-tile", "children"),
+        Output("threshold-tile", "children"),
+        Output("pie-chart", "figure"),
     ],
     [Input("update-interval", "n_intervals")]
 )
 def update_dashboard(n):
     try:
-        # Fetch latest metrics from backend
         resp = requests.get("https://met-rbic.onrender.com/metrics", timeout=2)
         data = resp.json()
     except Exception as e:
         print("Error fetching metrics:", e)
-        # fallback to last known metrics
         data = metrics_data
 
+    # Tiles values with color coding
     scanned = data["scanned"]
     anomalies = data["anomalies"]
+    normal = data.get("total_normal", scanned - anomalies)
     fps = data["fps"]
+    percent_anomalous = data.get("percent_anomalous", round(anomalies / scanned * 100, 2))
+    threshold = data.get("threshold", 0.5)
 
-    epochs = data["epochs"]
-    precision = data["precision"]
-    recall = data["recall"]
-    f1 = data["f1"]
+    # Pie chart
+    fig = go.Figure(go.Pie(labels=["Normal", "Anomalous"],
+                           values=[normal, anomalies],
+                           marker=dict(colors=["green", "red"]),
+                           hole=0.4))
+    fig.update_layout(margin=dict(l=40, r=40, t=40, b=40), height=400, paper_bgcolor="rgba(0,0,0,0)")
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=epochs, y=precision, mode="lines+markers", name="Precision"))
-    fig.add_trace(go.Scatter(x=epochs, y=recall, mode="lines+markers", name="Recall"))
-    fig.add_trace(go.Scatter(x=epochs, y=f1, mode="lines+markers", name="F1 Score"))
-
-    fig.update_layout(template="plotly_white", height=400,
-                      margin=dict(l=40, r=40, t=40, b=40),
-                      legend=dict(orientation="h", y=-0.2),
-                      plot_bgcolor="rgba(255,255,255,0.5)",
-                      paper_bgcolor="rgba(0,0,0,0)",
-                      font=dict(color="#333"))
-
-    return scanned, anomalies, fps, fig
+    return scanned, anomalies, normal, fps, percent_anomalous, threshold, fig
 
 # =======================
 # Backend endpoints
 # =======================
 @server.route("/metrics", methods=["GET"])
 def metrics_get():
-    """Frontend fetches metrics."""
     return jsonify(metrics_data)
 
 @server.route("/metrics", methods=["POST"])
 def metrics_post():
-    """External devices push metrics."""
     global metrics_data
     incoming = request.get_json(force=True)
     for key, value in incoming.items():
