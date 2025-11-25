@@ -17,12 +17,12 @@ app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.FLATLY])
 # Initial metrics
 # ----------------------------
 metrics_data = {
-    "scanned": 0,
-    "anomalies": 0,
-    "total_normal": 0,
-    "fps": 0,
-    "percent_anomalous": 0,
-    "threshold": 0
+    "scanned": 1,
+    "anomalies": 1,
+    "total_normal": 1,
+    "fps": 1,
+    "percent_anomalous": 1,
+    "threshold": 1
 }
 
 # =======================
