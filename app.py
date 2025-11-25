@@ -42,75 +42,77 @@ ICON_STYLE = {"fontSize": "28px", "marginRight": "8px"}
 app.layout = dbc.Container([
     dcc.Interval(id="update-interval", interval=1000),
 
+    # Logo + Title
     html.Div([
         html.Img(src="/assets/logo.png", style={"height": "85px", "marginBottom": "10px"}),
         html.H1("Anomaly Dashboard Demo", style={"textAlign": "center",
-                                                      "fontWeight": "700",
-                                                      "fontSize": "42px",
-                                                      "color": "#222",
-                                                      "marginBottom": "25px"})
+                                                  "fontWeight": "700",
+                                                  "fontSize": "42px",
+                                                  "color": "#222",
+                                                  "marginBottom": "25px"})
     ], style={"textAlign": "center"}),
 
-    # =================== METRIC TILES ===================
+    # Metric Tiles - Row 1
     dbc.Row([
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div([
                 DashIconify(icon="mdi:eye", style=ICON_STYLE),
                 html.Span("Scanned", className="text-muted")
-            ], className="text-center mb-2"),
-            html.Div(id="scanned-tile", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
-        ]), style=CARD_STYLE), md=4),
+            ], className="d-flex justify-content-center align-items-center mb-2"),
+            html.Div(id="scanned-tile", className="tile-number", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
+        ]), style=CARD_STYLE), md=4, xs=12, className="mb-3"),
 
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div([
                 DashIconify(icon="mdi:alert-circle-outline", style=ICON_STYLE),
                 html.Span("Anomalies", className="text-muted")
-            ], className="text-center mb-2"),
-            html.Div(id="anomalies-tile", style={**TILE_NUMBER_STYLE, "color": "red"})
-        ]), style=CARD_STYLE), md=4),
+            ], className="d-flex justify-content-center align-items-center mb-2"),
+            html.Div(id="anomalies-tile", className="tile-number", style={**TILE_NUMBER_STYLE, "color": "red"})
+        ]), style=CARD_STYLE), md=4, xs=12, className="mb-3"),
 
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div([
                 DashIconify(icon="mdi:check-circle-outline", style=ICON_STYLE),
                 html.Span("Normal", className="text-muted")
-            ], className="text-center mb-2"),
-            html.Div(id="normal-tile", style={**TILE_NUMBER_STYLE, "color": "green"})
-        ]), style=CARD_STYLE), md=4),
-    ], className="my-4"),
+            ], className="d-flex justify-content-center align-items-center mb-2"),
+            html.Div(id="normal-tile", className="tile-number", style={**TILE_NUMBER_STYLE, "color": "green"})
+        ]), style=CARD_STYLE), md=4, xs=12, className="mb-3"),
+    ], className="my-2"),
 
+    # Metric Tiles - Row 2
     dbc.Row([
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div([
                 DashIconify(icon="mdi:speedometer", style=ICON_STYLE),
                 html.Span("FPS", className="text-muted")
-            ], className="text-center mb-2"),
-            html.Div(id="fps-tile", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
-        ]), style=CARD_STYLE), md=4),
+            ], className="d-flex justify-content-center align-items-center mb-2"),
+            html.Div(id="fps-tile", className="tile-number", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
+        ]), style=CARD_STYLE), md=4, xs=12, className="mb-3"),
 
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div([
                 DashIconify(icon="mdi:percent", style=ICON_STYLE),
-                html.Span("Anomaly Percentage", className="text-muted")
-            ], className="text-center mb-2"),
-            html.Div(id="percent-anomalous-tile", style={**TILE_NUMBER_STYLE, "color": "red"})
-        ]), style=CARD_STYLE), md=4),
+                html.Span("Anomaly %", className="text-muted")
+            ], className="d-flex justify-content-center align-items-center mb-2"),
+            html.Div(id="percent-anomalous-tile", className="tile-number", style={**TILE_NUMBER_STYLE, "color": "red"})
+        ]), style=CARD_STYLE), md=4, xs=12, className="mb-3"),
 
         dbc.Col(dbc.Card(dbc.CardBody([
             html.Div([
                 DashIconify(icon="mdi:vector-triangle", style=ICON_STYLE),
                 html.Span("Threshold", className="text-muted")
-            ], className="text-center mb-2"),
-            html.Div(id="threshold-tile", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
-        ]), style=CARD_STYLE), md=4),
-    ], className="my-4"),
+            ], className="d-flex justify-content-center align-items-center mb-2"),
+            html.Div(id="threshold-tile", className="tile-number", style={**TILE_NUMBER_STYLE, "color": "#2a2a2a"})
+        ]), style=CARD_STYLE), md=4, xs=12, className="mb-3"),
+    ], className="my-2"),
 
-    # =================== PIE CHART ===================
+    # Pie Chart
     dbc.Row([
         dbc.Col(dbc.Card(dbc.CardBody([
             html.H4("Normal vs Anomalous", style=TITLE_STYLE),
-            dcc.Graph(id="pie-chart", style={"height": "420px"})
-        ])), md=12, style=CARD_STYLE)
-    ], className="my-3")
+            dcc.Graph(id="pie-chart", style={"width": "100%", "height": "100%"})
+        ])), md=12, xs=12, style=CARD_STYLE, className="mb-3")
+    ], className="my-2"),
 
 ], fluid=True, style=BACKGROUND_STYLE)
 
@@ -137,20 +139,20 @@ def update_dashboard(n):
         print("Error fetching metrics:", e)
         data = metrics_data
 
-    # Tiles values with color coding
-    scanned = data["scanned"]
-    anomalies = data["anomalies"]
+    scanned = data.get("scanned", 1)
+    anomalies = data.get("anomalies", 0)
     normal = data.get("total_normal", scanned - anomalies)
-    fps = data["fps"]
+    fps = data.get("fps", 0)
     percent_anomalous = data.get("percent_anomalous", round(anomalies / scanned * 100, 2))
     threshold = data.get("threshold", 0.5)
 
-    # Pie chart
     fig = go.Figure(go.Pie(labels=["Normal", "Anomalous"],
                            values=[normal, anomalies],
                            marker=dict(colors=["green", "red"]),
                            hole=0.4))
-    fig.update_layout(margin=dict(l=40, r=40, t=40, b=40), height=400, paper_bgcolor="rgba(0,0,0,0)")
+    fig.update_layout(margin=dict(l=20, r=20, t=20, b=20),
+                      height=400,
+                      paper_bgcolor="rgba(0,0,0,0)")
 
     return scanned, anomalies, normal, fps, percent_anomalous, threshold, fig
 
